@@ -1,8 +1,7 @@
 import React from "react";  
 import { api } from "~/utils/api";
 
-export default function Dashboard() {  
-  const {data} = api.user.createUser.useQuery({ text: "World" });
+export default function Dashboard() {   
 
   return (
     <>

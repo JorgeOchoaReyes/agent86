@@ -1,13 +1,13 @@
 import React from "react";  
+import { ChatBlock } from "~/components/chat";
 
-export default function Chat() { 
+export default function ChatPage() { 
  
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
-        <h1 className="text-3xl font-bold mb-4">Chat</h1>
-        <p className="text-gray-600">Welcome to your dashboard!</p>
+      <div className="flex flex-col items-center w-full justify-center h-screen bg-gray-100">
+        <ChatBlock />
       </div>
     </> 
   );

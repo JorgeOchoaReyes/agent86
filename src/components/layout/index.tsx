@@ -15,9 +15,10 @@ import { auth } from "~/firebase";
 import type { User } from "firebase/auth"; 
 import { useRouter, type NextRouter } from "next/router";
 import Head from "next/head";
+import { Loader2 } from "lucide-react";
 
 export const Layout: React.FC<{children: React.ReactNode}> = ({children}) => {
-  const [user, ] = useAuthState(auth);
+  const [user, loading ] = useAuthState(auth);
   const router = useRouter();
   const pathname = router.pathname; 
   const _title = pathname.split("/")?.slice(-1)?.[0]?.replace(/-/g, " ") ?? "Dashboard";
@@ -31,7 +32,7 @@ export const Layout: React.FC<{children: React.ReactNode}> = ({children}) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <div className="flex bg-indigo-50">
-        <Sidebar user={user ?? {displayName: "", email: ""} as User} router={router} selected={pathname} />
+        <Sidebar user={user ?? null} router={router} selected={pathname} loading={loading} /> 
         <div className="w-full transition-all">
           {children}
         </div>
@@ -40,7 +41,7 @@ export const Layout: React.FC<{children: React.ReactNode}> = ({children}) => {
   );
 };
 
-const Sidebar: React.FC<{user: User | null, router: NextRouter, selected: string}> = ({user, router, selected}) => {
+const Sidebar: React.FC<{user: User | null, router: NextRouter, selected: string, loading: boolean}> = ({user, router, selected, loading}) => {
   const [open, setOpen] = useState(true); 
 
   return (
@@ -50,8 +51,8 @@ const Sidebar: React.FC<{user: User | null, router: NextRouter, selected: string
       style={{
         width: open ? "225px" : "fit-content",
       }}
-    >
-      <TitleSection open={open} user={user} />
+    > 
+      <TitleSection open={open} user={user} loading={loading} />
       <div className="space-y-1">
         <Option
           Icon={FiHome}
@@ -144,7 +145,7 @@ const Option: React.FC<{
   );
 };
 
-const TitleSection: React.FC<{open: boolean, user: User | null}> = ({ open, user }) => {
+const TitleSection: React.FC<{open: boolean, user: User | null, loading: boolean}> = ({ open, user, loading }) => {
   return (
     <div className="mb-3 border-b border-slate-300 pb-3">
       <div className="flex cursor-pointer items-center justify-between rounded-md transition-colors hover:bg-slate-100">
@@ -157,8 +158,13 @@ const TitleSection: React.FC<{open: boolean, user: User | null}> = ({ open, user
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.125 }}
             >
-              <span className="block text-xs font-semibold">{user?.displayName ?? "Brewmaster"}</span>
-              <span className="block text-xs text-slate-500">{user?.email}</span>
+              {
+                loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>
+                  <span className="block text-xs font-semibold">{user?.displayName ?? "Brewmaster"}</span>
+                  <span className="block text-xs text-slate-500">{user?.email}</span>
+                </>
+              }
+
             </motion.div>
           )}
         </div>

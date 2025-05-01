@@ -1,10 +1,7 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "~/firebase";
-// import { getSubscription, createCheckoutSession } from "@/lib/stripe" 
+import { auth } from "~/firebase"; 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -48,9 +45,7 @@ export default function Pricing() {
   useEffect(() => {
     if (!authLoading && user) {
       const fetchSubscription = async () => {
-        try {
-        //   const sub = await getSubscription(user.uid)
-        //   setSubscription(sub)
+        try { 
         } catch (error) {
           console.error("Error fetching subscription:", error);
         } finally {

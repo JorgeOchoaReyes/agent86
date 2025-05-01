@@ -1,4 +1,3 @@
-// pages/api/oauth/callback.js
 import { Buffer } from "buffer";
 import type { NextApiRequest, NextApiResponse } from "next/types";
 import { db } from "~/server/api/firebase-admin";
@@ -47,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           squareMerchantId: merchantId,
         }, { merge: true });
 
-        res.writeHead(302, { Location: "/dashboard" });
+        res.writeHead(302, { Location: "/dashboard/settings" });
         res.end();
       } else {
         console.error("Error exchanging code for token:", data);
