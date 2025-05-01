@@ -8,3 +8,16 @@ export interface User extends UserRecord {
     priceId?: string
     clientReferenceId?: string
 }
+
+export interface Chat {
+    id: string; 
+    messages: Message[];
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface Message {
+    id: string;
+    content: string;
+    role: "user" | "assistant";
+}
