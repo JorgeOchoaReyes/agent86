@@ -9,6 +9,8 @@ type CreateContextOptions = {
   session: {
     user: UserRecord | null;
   };
+  req: CreateNextContextOptions["req"];
+  res: CreateNextContextOptions["res"];
 };
  
 const createInnerTRPCContext = (_opts: CreateContextOptions) => {
@@ -17,7 +19,9 @@ const createInnerTRPCContext = (_opts: CreateContextOptions) => {
     auth: auth,
     session: {
       user: _opts.session.user,
-    }
+    },
+    req: _opts.req,
+    res: _opts.res,
   };
 };
  
@@ -28,7 +32,9 @@ export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
     return createInnerTRPCContext({
       session: {
         user: null,
-      }
+      },
+      req,
+      res,
     });
   } 
   const decodedToken = await app.auth().verifyIdToken(firebasetokenCookie);
@@ -38,7 +44,9 @@ export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
   return createInnerTRPCContext({
     session: {
       user: user,
-    }
+    },
+    req,
+    res,
   });
 };
  

@@ -16,14 +16,14 @@ const plans = [
     id: "basic",
     name: "Basic",
     price: "$9.99",
-    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo", // Replace with actual Stripe price ID
+    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo", 
     features: ["Access to basic content", "Email support", "Monthly newsletter"],
   },
   {
     id: "pro",
     name: "Pro",
     price: "$19.99",
-    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo", // Replace with actual Stripe price ID
+    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo",  
     features: ["Access to all content", "Priority email support", "Monthly newsletter", "Exclusive webinars"],
     popular: true,
   },
@@ -31,7 +31,7 @@ const plans = [
     id: "enterprise",
     name: "Enterprise",
     price: "$49.99",
-    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo", // Replace with actual Stripe price ID
+    priceId: "price_1RIMRLPKzVUQrCfdRpsWyJvo", 
     features: ["Access to all content", "24/7 support", "Monthly newsletter", "Exclusive webinars", "Custom solutions"],
   },
 ];
@@ -66,8 +66,7 @@ export default function Pricing() {
     }
   }, [user, authLoading]);
 
-  const handleSubscribe = async (priceId: string) => { 
-
+  const handleSubscribe = async (priceId: string) => {  
     setCheckoutLoading(priceId);
     try {
       const { url } = await createCheckoutSession.mutateAsync({ priceId });
