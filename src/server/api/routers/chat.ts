@@ -2,8 +2,7 @@ import { z } from "zod";
 import { GoogleGenerativeAI, type Content } from "@google/generative-ai";  
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
 import type { Chat, Message } from "~/types";
-import { v4 as uuid } from "uuid";
-import { create } from "domain";
+import { v4 as uuid } from "uuid"; 
 
 export const chatRouter = createTRPCRouter({
   chat: protectedProcedure
