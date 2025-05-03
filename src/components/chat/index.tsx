@@ -6,7 +6,9 @@ import { ChatMessage } from "./chat-message";
 import { Loader2 } from "lucide-react"; 
 import { api } from "~/utils/api";
 import { type Chat, type Message } from "~/types";
- 
+import { ChatSidebar } from "./chat-sidebar";
+import { useRouter } from "next/router"; 
+  
 export function ChatBlock() {  
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +21,25 @@ export function ChatBlock() {
     messages: [],
   }); 
 
-  const chat = api.chat.chat.useMutation();
+  const router = useRouter();
+  const chat = api.chat.chat.useMutation(); 
+  const getChatMessages = api.chat.getRecentMessages.useMutation();
+  const getMostRecentChat = api.chat.getMostRecentChat.useMutation();
+
+  useEffect(() => {
+    if(router.query.chatId) {
+      ((async () => {
+        const chatId = router.query.chatId as string; 
+        const chatData = await getChatMessages.mutateAsync({ chatId });
+        setCurrentChat(chatData); 
+      }) as () => void)(); 
+    } else {
+      ((async () => {
+        const chatData = await getMostRecentChat.mutateAsync(); 
+        setCurrentChat(chatData); 
+      }) as () => void)();  
+    }
+  }, [router.query.chatId]);
  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,33 +59,28 @@ export function ChatBlock() {
     setCurrentChat(updatedChat); 
     setInputValue("");
     setIsLoading(true);
-    setIsStreaming(true);
- 
+    setIsStreaming(true); 
     const assistantMessageId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
       id: assistantMessageId,
       content: "",
       role: "assistant",
-    };
-
+    }; 
     const chatWithAssistantMessage = {
       ...updatedChat,
       messages: [...updatedChat.messages, assistantMessage],
-    };
-
-    setCurrentChat(chatWithAssistantMessage); 
-
-    try {  
-
+    }; 
+    setCurrentChat(chatWithAssistantMessage);  
+    try {   
       const response = await chat.mutateAsync({
         message: userMessage.content,
         chatId: currentChat.id,
-      });
-
+      }); 
       const assistantMessage = {
         id: assistantMessageId,
         content: response.messages[response.messages.length - 1]?.content ?? "",
         role: "assistant",
+        isNew: true,
       }; 
       setCurrentChat((p) => {
         return {
@@ -101,36 +116,42 @@ export function ChatBlock() {
       setIsLoading(false);
       setIsStreaming(false);
     }
-  }; 
- 
+  };  
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 w-full">   
+      <ChatSidebar /> 
       <div className="flex flex-1 flex-col">
         <div className="flex-1 overflow-y-auto p-4">
-          {currentChat.messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="max-w-md text-center">
-                <h2 className="mb-2 text-2xl font-bold">Welcome to AI Chat</h2>
-                <p className="text-muted-foreground">
-                  Start a conversation with the AI assistant by typing a message below.
-                </p>
+          {
+            (getMostRecentChat.isPending || getChatMessages.isPending) ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4 pb-20">
-              {currentChat.messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-              {isStreaming && (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
+            ) :
+              currentChat.messages.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="max-w-md text-center">
+                    <h2 className="mb-2 text-2xl font-bold">Welcome to AI Chat</h2>
+                    <p className="text-muted-foreground">
+                  Start a conversation with the AI assistant by typing a message below.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 pb-20">
+                  {currentChat.messages.map((message) => (
+                    <ChatMessage key={message.id} message={message} />
+                  ))}
+                  {isStreaming && (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
         </div> 
         <div className="border-t bg-background p-4">
           <div className="mx-auto flex max-w-3xl items-center space-x-2">

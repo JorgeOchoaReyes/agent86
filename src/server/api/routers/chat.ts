@@ -3,10 +3,11 @@ import { GoogleGenerativeAI, type Content } from "@google/generative-ai";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
 import type { Chat, Message } from "~/types";
 import { v4 as uuid } from "uuid";
+import { create } from "domain";
 
 export const chatRouter = createTRPCRouter({
   chat: protectedProcedure
-    .input( z.object({ 
+    .input(z.object({ 
       chatId: z.string().optional(),
       message: z.string().optional(),
     }))
@@ -24,7 +25,6 @@ export const chatRouter = createTRPCRouter({
       let chat: Chat | null = null;
       const userChats = await ctx.db.collection("users").doc(userId).collection("chats").doc(chatId ?? "").get();
       if(!chatId || !userChats.exists) {
-        console.log("Creating new chat");
         const newChat = uuid();
         chat = {
           id: newChat, 
@@ -41,19 +41,22 @@ export const chatRouter = createTRPCRouter({
         }, { merge: true }); 
       } else { 
         chat = userChats.data() as Chat;
+        chat.messages = chat.messages.sort((a,b) => parseInt(a.id) - parseInt(b.id));
+        chat.messages.push({
+          id: new Date().getTime().toString(),
+          content: input?.message ?? "",
+          role: "user",
+        });
       }
-      console.log("Chat ID", chat.id);
       const messagesAsGeminiHistory = chat.messages.map((message) => {
         return {
-          role: message.role === "user" ? "user" : "assistant",
+          role: message.role === "user" ? "user" : "model",
           parts: [{text: message?.content}],
         } as Content;
       });
-
       const brewmaster = model.startChat({
         history: messagesAsGeminiHistory,
       });
-      
       const response = await brewmaster.sendMessage(input?.message ?? ""); 
       const assistantMessageId = (new Date().getTime() + 1).toString();
       const assistantMessage: Message = {
@@ -74,7 +77,66 @@ export const chatRouter = createTRPCRouter({
       return {
         ...updatedChat,
         messages: [...chat.messages, assistantMessage],
-      };
-
+      }; 
     }),
+  getRecentMessages: protectedProcedure
+    .input(z.object({ chatId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const userChats = await ctx.db.collection("users").doc(userId).collection("chats").doc(input.chatId).get();
+      if (!userChats.exists) {
+        throw new Error("Chat not found");
+      }
+      const chat = userChats.data() as Chat;
+      chat.messages = chat.messages.sort((a,b) => parseInt(a.id) - parseInt(b.id)).slice(-5); 
+      return chat;  
+    }),
+  getMostRecentChat: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.session.user?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const userChats = await ctx.db.collection("users").doc(userId).collection("chats").orderBy("createdAt", "desc").limit(1).get();
+      if (userChats.empty) {
+        throw new Error("No chats found");
+      }
+      const chat = userChats?.docs?.[0]?.data() as Chat;
+      return chat; 
+    }),
+  getChats: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.session.user?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const userChats = await ctx.db.collection("users").doc(userId).collection("chats").get();
+      const chats: Pick<Chat, "createdAt" | "id" >[] = [];
+      userChats.forEach((doc) => {
+        const chat = doc.data() as Chat;
+        chats.push({
+          id: chat.id,
+          createdAt: chat.createdAt,
+        });
+      });
+      return chats.sort((a, b) => b.createdAt - a.createdAt);
+    }),
+  createChat: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.session.user?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const newChat = uuid();
+      await ctx.db.collection("users").doc(userId).collection("chats").doc(newChat).set({
+        id: newChat,
+        messages: [],
+        createdAt: new Date().getTime(),
+        updatedAt: new Date().getTime(),
+      }, { merge: true });
+      return newChat;
+    })
 });
