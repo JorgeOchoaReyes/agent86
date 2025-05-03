@@ -25,13 +25,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
     const fullContent = message.content;  
     const typingInterval = setInterval(() => { 
       if (currentIndex <= fullContent.length) {
-        setDisplayedContent(fullContent.substring(0, currentIndex));
-        currentIndex++;
+        setDisplayedContent(fullContent.substring(0, currentIndex+10));
+        currentIndex += 10;
       } else {
         clearInterval(typingInterval);
         setIsTyping(false);
       }
-    }, 5); 
+    }, 1); 
 
     return () => clearInterval(typingInterval);
   }, [isNewAssistantMessage, message.content, message.isNew, fullContentRef]);
@@ -57,7 +57,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {isUser ? "You" : "AI Assistant"}
           {isTyping && <span className="ml-2 inline-block animate-pulse">...</span>}
         </div>
-        <div className="prose prose-sm dark:prose-invert">
+        <div className="prose prose-sm dark:prose-invert overflow-scroll sm:max-w-[60vw] 2xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">
           {messageParts.map((part, index) => {
             if (part.type === "text") {
               return (

@@ -1,7 +1,7 @@
 import { z } from "zod";  
-import { GoogleGenerativeAI, type Content } from "@google/generative-ai";  
+import { VertexAI , type Content } from "@google-cloud/vertexai";  
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
-import type { Chat, Message } from "~/types";
+import type { Chat, Message, VertexAiAccount } from "~/types";
 import { v4 as uuid } from "uuid"; 
 
 export const chatRouter = createTRPCRouter({
@@ -11,9 +11,19 @@ export const chatRouter = createTRPCRouter({
       message: z.string().optional(),
     }))
     .mutation(async ({ input, ctx}) => {  
-      const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
-      const model = gemini.getGenerativeModel({
-        model: "gemini-1.5-flash",
+      if(!process.env.VERTEX_AI_ACCOUNT) {
+        throw new Error("Vertex AI account not found");
+      }
+      const vertexAIAccount = JSON.parse(process.env.VERTEX_AI_ACCOUNT || "{}") as VertexAiAccount; 
+      const vertex = new VertexAI({
+        project:  vertexAIAccount.project_id,
+        location: "us-central1",
+        googleAuthOptions: {
+          credentials: vertexAIAccount,
+        }
+      });
+      const model = vertex.getGenerativeModel({
+        model: "gemini-2.0-flash-001",     
         systemInstruction: "You are a helpful assitant to help users with their menu management, and labor questions.", 
       });   
       const { chatId } = input;
@@ -23,6 +33,7 @@ export const chatRouter = createTRPCRouter({
       }
       let chat: Chat | null = null;
       const userChats = await ctx.db.collection("users").doc(userId).collection("chats").doc(chatId ?? "").get();
+
       if(!chatId || !userChats.exists) {
         const newChat = uuid();
         chat = {
@@ -47,6 +58,7 @@ export const chatRouter = createTRPCRouter({
           role: "user",
         });
       }
+      
       const messagesAsGeminiHistory = chat.messages.map((message) => {
         return {
           role: message.role === "user" ? "user" : "model",
@@ -58,9 +70,13 @@ export const chatRouter = createTRPCRouter({
       });
       const response = await brewmaster.sendMessage(input?.message ?? ""); 
       const assistantMessageId = (new Date().getTime() + 1).toString();
+      const assistantResponse = response?.response?.candidates?.[0]?.content?.parts.reduce((acc, cur) => {
+        acc = acc + cur.text + "\n";
+        return acc;
+      }, "") ?? "";
       const assistantMessage: Message = {
         id: assistantMessageId,
-        content: response.response.text(),
+        content: assistantResponse,
         role: "assistant",
       };
       const updatedChat = {

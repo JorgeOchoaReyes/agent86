@@ -46,6 +46,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
   
   return (
     <div className={geist.className}>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       {
         isDashboardRoute ? ( 
           <Layout>
