@@ -6,4 +6,4 @@ const parseConfig = (JSON.parse(process.env.NEXT_PUBLIC_FIREBASE ?? "{}") ?? {})
 const app = getApps().length > 0 ? getApps()[0] : initializeApp(parseConfig);
 const auth = getAuth(app);
 
-export {app, auth};
+export { app, auth };
