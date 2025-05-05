@@ -39,6 +39,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const processMessageContent = (content: string) => {
     const parts: { type: string; content: string }[] = [];
     content.split("\n").forEach((part) => {
+      if(part.length > 150) {
+        const subParts = part.match(/.{1,150}/g) ?? []; 
+        subParts.forEach((subPart) => {
+          parts.push({ type: "text", content: subPart });
+          parts.push({ type: "break", content: "\n" });
+        });
+        return;
+      }
       parts.push({ type: "text", content: part });
       parts.push({ type: "break", content: "\n" });
     });
@@ -57,11 +65,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {isUser ? "You" : "AI Assistant"}
           {isTyping && <span className="ml-2 inline-block animate-pulse">...</span>}
         </div>
-        <div className="prose prose-sm dark:prose-invert overflow-scroll sm:max-w-[60vw] 2xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">
+        <div className="prose prose-sm dark:prose-invert overflow-scroll sm:max-w-[60vw] 3xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2 ">
           {messageParts.map((part, index) => {
             if (part.type === "text") {
               return (
-                <div key={index}>
+                <div key={index} >
                   <Markdown remarkPlugins={[remarkGfm]}>{`${part.content ?? ""}`}</Markdown>
                 </div>
               );

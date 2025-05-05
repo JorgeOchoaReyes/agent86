@@ -30,10 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           client_id: squareAppId,
           client_secret: squareAppSecret,
         }),
-      });
-
-      const data = await response.json() as { access_token: string; refresh_token: string; merchant_id: string };
-
+      }); 
+      const data = await response.json() as { access_token: string; refresh_token: string; merchant_id: string }; 
       if (response.ok && data.access_token) {
         const accessToken = data.access_token;
         const refreshToken = data.refresh_token;
@@ -44,8 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           squareAccessToken: accessToken,
           squareRefreshToken: refreshToken,
           squareMerchantId: merchantId,
-        }, { merge: true });
-
+        }, { merge: true }); 
         res.writeHead(302, { Location: "/dashboard/settings" });
         res.end();
       } else {
