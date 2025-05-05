@@ -5,7 +5,10 @@
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; 
+      --breakpoint-xs: 30rem;
+      --breakpoint-2xl: 100rem;
+      --breakpoint-3xl: 106rem; 
 }
 
 @theme inline {

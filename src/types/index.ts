@@ -5,6 +5,9 @@ import type { UserRecord } from "firebase-admin/auth";
 export interface User extends UserRecord {
     squareAppId?: string
     squareAppSecret?: string
+    squareAccessToken?: string
+    squareRefreshToken?: string
+    squareMerchantId?: string
     subscriptionId?: string
     status?: string
     priceId?: string

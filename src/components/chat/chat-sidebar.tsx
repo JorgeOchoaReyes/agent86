@@ -25,7 +25,7 @@ export function ChatSidebar() {
 
 
   const createNewChat = async () => { 
-    const newChatId = await createChat.mutateAsync();
+    const newChatId = await createChat.mutateAsync({});
     if(!newChatId) {
       toast.error("Failed to create a new chat. Please try again.");
     } 

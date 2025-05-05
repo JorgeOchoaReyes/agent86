@@ -1,8 +1,9 @@
 import { z } from "zod";  
 import { VertexAI , type Content } from "@google-cloud/vertexai";  
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
-import type { Chat, Message, VertexAiAccount } from "~/types";
+import type { Chat, Message, User, VertexAiAccount } from "~/types";
 import { v4 as uuid } from "uuid"; 
+import { getPossibleMenuItems } from "~/server/api/functions";
 
 export const chatRouter = createTRPCRouter({
   chat: protectedProcedure
@@ -140,6 +141,7 @@ export const chatRouter = createTRPCRouter({
       return chats.sort((a, b) => b.createdAt - a.createdAt);
     }),
   createChat: protectedProcedure
+    .input(z.object({  message: z.string().optional() }))
     .mutation(async ({ ctx }) => {
       const userId = ctx.session.user?.uid;
       if (!userId) {
@@ -153,5 +155,25 @@ export const chatRouter = createTRPCRouter({
         updatedAt: new Date().getTime(),
       }, { merge: true });
       return newChat;
+    }), 
+  searchAnItem: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.session.user?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const usersSquareCredentials = await ctx.db.collection("users").doc(userId).get();
+
+      const squareCredentials = usersSquareCredentials.data() as User;
+      if(!squareCredentials?.squareAccessToken) {
+        throw new Error("Square credentials not found");
+      }
+      const squareAccessToken = squareCredentials.squareAccessToken;
+      const findItems = await getPossibleMenuItems(squareAccessToken, "burger");
+      if(!findItems || findItems.length === 0) {
+        throw new Error("No items found");
+      }
+      console.log("findItems", findItems);
+      return findItems;
     })
 });
