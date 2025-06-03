@@ -1,4 +1,3 @@
-"use client"; 
 import { useState, useRef, useEffect } from "react"; 
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input"; 
@@ -18,7 +17,13 @@ export function ChatBlock() {
     id: "1",
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    messages: [],
+    messages: [
+      {
+        content: "Hi, I can help you with anything you need regarding menu management!",
+        id: Date.now().toString(),
+        role: "assistant",
+      }
+    ],
   }); 
 
   const router = useRouter();

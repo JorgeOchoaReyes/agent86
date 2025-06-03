@@ -3,7 +3,8 @@ import { VertexAI , type Content } from "@google-cloud/vertexai";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
 import type { Chat, Message, User, VertexAiAccount } from "~/types";
 import { v4 as uuid } from "uuid"; 
-import { getPossibleMenuItems } from "~/server/api/functions";
+import { getMenuItemTool, getPossibleMenuItems } from "~/server/api/functions";
+import { getMenuItem } from "~/server/api/functions";
 
 export const chatRouter = createTRPCRouter({
   chat: protectedProcedure
@@ -25,7 +26,7 @@ export const chatRouter = createTRPCRouter({
       });
       const model = vertex.getGenerativeModel({
         model: "gemini-2.0-flash-001",     
-        systemInstruction: "You are a helpful assitant to help users with their menu management, and labor questions.", 
+        systemInstruction: "You are a helpful assitant to help users with their menu management, and labor questions. Return your answers as valid arkdonw, turn image content to valid markdown as well.", 
       });   
       const { chatId } = input;
       const userId = ctx.session.user?.uid;
@@ -68,32 +69,83 @@ export const chatRouter = createTRPCRouter({
       });
       const brewmaster = model.startChat({
         history: messagesAsGeminiHistory,
+        tools: [getMenuItemTool]
       });
-      const response = await brewmaster.sendMessage(input?.message ?? ""); 
-      const assistantMessageId = (new Date().getTime() + 1).toString();
-      const assistantResponse = response?.response?.candidates?.[0]?.content?.parts.reduce((acc, cur) => {
-        acc = acc + cur.text + "\n";
-        return acc;
-      }, "") ?? "";
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        content: assistantResponse,
-        role: "assistant",
-      };
-      const updatedChat = {
-        ...chat,
-        messages: [...chat.messages, assistantMessage],
-        updatedAt: new Date().getTime(),
-      };
-
-      await ctx.db.collection("users").doc(userId).collection("chats").doc(chat.id).set({
-        ...updatedChat,
-      }, { merge: true });
       
-      return {
-        ...updatedChat,
-        messages: [...chat.messages, assistantMessage],
-      }; 
+      const response = await brewmaster.sendMessage(input?.message ?? ""); 
+
+      const call = response.response.candidates?.[0]?.content?.parts?.[0]?.functionCall;
+
+      if (call?.name === "getMenuItem") { 
+        try {
+          const userFetch = await ctx.db.collection("users").doc(userId).get(); 
+          const userData = userFetch.data() as User; 
+          const accessToken = userData.squareAccessToken;
+          const menuItems = await getMenuItem(accessToken ?? ""); 
+
+          const functionResponse = { 
+            name: "getMenuItem",
+            response: {
+              menuItems: menuItems, 
+            },
+          };
+
+          const secondResult = await brewmaster.sendMessage(`
+            Here is the second respones:
+            ${JSON.stringify(functionResponse)}
+            
+            Please create a response that is formatted. 
+          `);
+          console.log("Model response after tool execution:", secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text);
+          
+          const assistantMessageId = (new Date().getTime() + 1).toString();
+          const assistantResponse = secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            content: assistantResponse,
+            role: "assistant",
+          };
+          const updatedChat = {
+            ...chat,
+            messages: [...chat.messages, assistantMessage],
+            updatedAt: new Date().getTime(),
+          };
+
+          await ctx.db.collection("users").doc(userId).collection("chats").doc(chat.id).set({
+            ...updatedChat,
+          }, { merge: true });
+      
+          return {
+            ...updatedChat,
+            messages: [...chat.messages, assistantMessage],
+          }; 
+
+        } catch (error) {
+          throw new Error(JSON.stringify(error));
+        }
+      } else {
+        const assistantMessageId = (new Date().getTime() + 1).toString();
+        const assistantResponse = response.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          content: assistantResponse,
+          role: "assistant",
+        };
+        const updatedChat = {
+          ...chat,
+          messages: [...chat.messages, assistantMessage],
+          updatedAt: new Date().getTime(),
+        };
+
+        await ctx.db.collection("users").doc(userId).collection("chats").doc(chat.id).set({
+          ...updatedChat,
+        }, { merge: true });
+      
+        return {
+          ...updatedChat,
+          messages: [...chat.messages, assistantMessage],
+        }; 
+      }
     }),
   getRecentMessages: protectedProcedure
     .input(z.object({ chatId: z.string() }))
