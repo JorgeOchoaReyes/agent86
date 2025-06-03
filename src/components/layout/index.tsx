@@ -7,8 +7,7 @@ import {
   FiDollarSign,
   FiHome, 
   FiSettings
-} from "react-icons/fi";
-import { FaMagnifyingGlass } from "react-icons/fa6";
+} from "react-icons/fi"; 
 import { motion } from "framer-motion";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "~/firebase";
@@ -60,13 +59,6 @@ const Sidebar: React.FC<{user: User | null, router: NextRouter, selected: string
           selected={selected === "/dashboard"}
           setSelected={async () => await router.push("/dashboard")}
           open={open}
-        />
-        <Option
-          Icon={FaMagnifyingGlass}
-          title="Chat"
-          selected={selected === "/dashboard/chat"}
-          setSelected={async () => await router.push("/dashboard/chat")}
-          open={open} 
         /> 
         <Option
           Icon={FiDollarSign}

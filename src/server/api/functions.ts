@@ -1,3 +1,5 @@
+import type { Tool } from "@google-cloud/vertexai";
+import type { CatalogItem, CatalogCategory } from "node_modules/square/api";
 import { SquareClient, SquareEnvironment } from "square"; 
 
 export const getPossibleMenuItems = async (accessToken: string, itemName: string) => {
@@ -41,4 +43,58 @@ export const getPossibleMenuItems = async (accessToken: string, itemName: string
   }
 
   return null; 
+};
+
+export const getMenuItemTool = {
+  function_declarations: [
+    {
+      name: "getMenuItem",
+      description: "Retrieves a list of menu items from Square, including their ID, name, description, and image URL.",
+      parameters: {
+        type: "object", 
+      }, 
+    },
+  ],
+} as Tool; 
+
+export const getMenuItem = async (accessToken: string) => {
+  const square = new SquareClient({
+    environment: SquareEnvironment.Production,
+    token: accessToken,
+  }); 
+ 
+
+  try {
+    const catalogItems = await square.catalog.list();
+    const items = catalogItems.data; 
+
+    console.log(items);
+
+    if(items?.length && items.length > 0) {
+      const itemDetails = await Promise.all(items.map(async (item) => { 
+        if(!item.id || !item || item.type !== "ITEM") return null;  
+
+        const imgaes = await square.catalog.object.get({
+          objectId: item.itemData?.imageIds?.[0] ?? "", 
+        });
+
+        let imageUrl = ""; 
+        if(imgaes.object?.type === "IMAGE") {
+          imageUrl = imgaes.object?.imageData?.url ?? "";
+        }
+
+        return {
+          id: item.id,
+          name: item.itemData?.name,
+          description: item.itemData?.description, 
+          image: imageUrl,
+        };
+      }));
+
+      return itemDetails.filter((item) => item !== null) as {id: string, name: string, description: string, image: string}[];
+    }
+
+  } catch (err) {
+    console.log(err);
+  }
 };

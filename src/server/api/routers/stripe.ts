@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import Stripe from "stripe";
 
-const stripeKey = process.env.NODE_ENV === "production" ? process.env.STRIPE_PROD_SECRET_KEY : process.env.STRIPE_DEV_SECRET_KEY;
+const stripeKey = process.env.NODE_ENV !== "production" ? process.env.STRIPE_PROD_SECRET_KEY : process.env.STRIPE_DEV_SECRET_KEY;
 
 const stripe = new Stripe(stripeKey!, {
   apiVersion: "2025-03-31.basil",

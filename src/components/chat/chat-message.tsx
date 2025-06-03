@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "../../lib/utils";
 import { Avatar } from "../../components/ui/avatar";
@@ -65,17 +64,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {isUser ? "You" : "AI Assistant"}
           {isTyping && <span className="ml-2 inline-block animate-pulse">...</span>}
         </div>
-        <div className="prose prose-sm dark:prose-invert overflow-scroll sm:max-w-[60vw] 3xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2 ">
+        <div className="prose prose-sm dark:prose-invert overflow-auto sm:max-w-[60vw] 3xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2">
           {messageParts.map((part, index) => {
             if (part.type === "text") {
               return (
-                <div key={index} >
+                <div key={index} className="markdown" >
                   <Markdown remarkPlugins={[remarkGfm]}>{`${part.content ?? ""}`}</Markdown>
                 </div>
               );
-            } else if (part.type === "break") {
-              return <div key={index} className="h-3" />;
-            }
+            } 
             return null;
           })} 
         </div>
