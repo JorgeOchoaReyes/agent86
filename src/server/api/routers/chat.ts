@@ -26,7 +26,10 @@ export const chatRouter = createTRPCRouter({
       });
       const model = vertex.getGenerativeModel({
         model: "gemini-2.0-flash-001",     
-        systemInstruction: "You are a helpful assitant to help users with their menu management, and labor questions. Return your answers as valid arkdonw, turn image content to valid markdown as well.", 
+        systemInstruction: `
+        You are a helpful assitant to help users with their menu management, and labor questions. Return your answers as VALID MARKDOWN, turn image content to VALID MARKDOWN as well with 200px width and height.
+        ONLY RETURN VALID MARKDOWN
+        `, 
       });   
       const { chatId } = input;
       const userId = ctx.session.user?.uid;
@@ -95,8 +98,7 @@ export const chatRouter = createTRPCRouter({
             ${JSON.stringify(functionResponse)}
             
             Please create a response that is formatted. 
-          `);
-          console.log("Model response after tool execution:", secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text);
+          `); 
           
           const assistantMessageId = (new Date().getTime() + 1).toString();
           const assistantResponse = secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
