@@ -1,5 +1,4 @@
-import type { Tool } from "@google-cloud/vertexai";
-import type { CatalogItem, CatalogCategory } from "node_modules/square/api";
+import type { Tool } from "@google-cloud/vertexai"; 
 import { SquareClient, SquareEnvironment } from "square"; 
 
 export const getPossibleMenuItems = async (accessToken: string, itemName: string) => {
@@ -68,8 +67,6 @@ export const getMenuItem = async (accessToken: string) => {
     const catalogItems = await square.catalog.list();
     const items = catalogItems.data; 
 
-    console.log(items);
-
     if(items?.length && items.length > 0) {
       const itemDetails = await Promise.all(items.map(async (item) => { 
         if(!item.id || !item || item.type !== "ITEM") return null;  
@@ -86,7 +83,7 @@ export const getMenuItem = async (accessToken: string) => {
         return {
           id: item.id,
           name: item.itemData?.name,
-          description: item.itemData?.description, 
+          description: "", 
           image: imageUrl,
         };
       }));

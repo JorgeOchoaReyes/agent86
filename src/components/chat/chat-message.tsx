@@ -4,7 +4,8 @@ import { Avatar } from "../../components/ui/avatar";
 import { Bot, User } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { type Message } from "~/types";
+import { type Message } from "~/types"; 
+import rehypeRaw from "rehype-raw";
 
 interface ChatMessageProps {
   message: Message
@@ -64,17 +65,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {isUser ? "You" : "AI Assistant"}
           {isTyping && <span className="ml-2 inline-block animate-pulse">...</span>}
         </div>
-        <div className="prose prose-sm dark:prose-invert overflow-auto sm:max-w-[60vw] 3xl:max-w-[65vw] break-words rounded-md bg-muted/50 p-2">
-          {messageParts.map((part, index) => {
-            if (part.type === "text") {
-              return (
-                <div key={index} className="markdown" >
-                  <Markdown remarkPlugins={[remarkGfm]}>{`${part.content ?? ""}`}</Markdown>
-                </div>
-              );
-            } 
-            return null;
-          })} 
+        <div className="markdown prose prose-sm dark:prose-invert overflow-auto sm:max-w-[60vw] 3xl:max-w-[80vw] break-words rounded-md bg-muted/50 p-2">
+          <Markdown rehypePlugins={[rehypeRaw]} remarkPlugins={[remarkGfm]}>{`${message.content ?? ""}`}</Markdown> 
         </div>
       </div>
     </div>
