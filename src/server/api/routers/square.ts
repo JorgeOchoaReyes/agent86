@@ -24,7 +24,7 @@ export const squareRouter = createTRPCRouter({
       if (!state) {
         throw new Error("User not authenticated");
       } 
-      const authorizationUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${squareAppId}&scope=MERCHANT_PROFILE_READ,ITEMS_READ,EMPLOYEES_READ,ORDERS_READ,PAYMENTS_READ,TIMECARDS_WRITE,&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`; 
+      const authorizationUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${squareAppId}&scope=MERCHANT_PROFILE_READ,ITEMS_READ,ITEMS_WRITE,EMPLOYEES_READ,ORDERS_READ,PAYMENTS_READ,TIMECARDS_WRITE,&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`; 
       ctx.res.setHeader("Set-Cookie", `state=${state}; Path=/; HttpOnly; SameSite=Strict; Secure`);
 
       return { authorizationUrl };
