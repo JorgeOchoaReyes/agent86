@@ -154,7 +154,7 @@ export default function SettingsPage() {
                   placeholder="Enter square app secret"
                 /> 
                 {
-                  isSquareOauth ? (
+                  !isSquareOauth ? (
                     <p className="text-center text-sm text-green-600 mt-4">Square is connected!</p>
                   ) : (
                     <Button className="mt-6 w-full" onClick={handleUpdateSquareCredentials}> 

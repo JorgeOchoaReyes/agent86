@@ -3,8 +3,8 @@ import { VertexAI , type Content } from "@google-cloud/vertexai";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
 import type { Chat, Message, User, VertexAiAccount } from "~/types";
 import { v4 as uuid } from "uuid"; 
-import { getMenuItemTool, getPossibleMenuItems } from "~/server/api/functions";
-import { getMenuItem } from "~/server/api/functions";
+import { getMenuItem, getPossibleMenuItems, markItem86Tool, markItemAs86 } from "~/server/tools"; 
+import { findItemsInRecentMessage } from "~/server/agents";
 
 export const chatRouter = createTRPCRouter({
   chat: protectedProcedure
@@ -72,7 +72,7 @@ export const chatRouter = createTRPCRouter({
       });
       const brewmaster = model.startChat({
         history: messagesAsGeminiHistory,
-        tools: [getMenuItemTool]
+        tools: [ markItem86Tool]
       });
       
       const response = await brewmaster.sendMessage(input?.message ?? ""); 
@@ -125,6 +125,58 @@ export const chatRouter = createTRPCRouter({
         } catch (error) {
           throw new Error(JSON.stringify(error));
         }
+      } else if(call?.name === "markItem86") {
+        const userFetch = await ctx.db.collection("users").doc(userId).get(); 
+        const userData = userFetch.data() as User; 
+        const accessToken = userData.squareAccessToken;
+        
+        if(!accessToken) throw new Error("No valid credentials.");
+
+        const findMenuItemUserIsTalkingAbout = await findItemsInRecentMessage([input.message ?? ""]);
+
+        const asArrayMenuItems = findMenuItemUserIsTalkingAbout?.split(",");
+
+        console.log("findMenuItemUserIsTalkingAbout", asArrayMenuItems);
+
+        const findPossibleMenuItem = await getPossibleMenuItems(accessToken, asArrayMenuItems?.[0] ?? ""); 
+        const _86 = await markItemAs86(accessToken, findPossibleMenuItem?.[0]?.id ?? "");
+        
+        const functionResponse = {
+          name: "markItem86",
+          response: {
+            result: _86
+          }
+        }; 
+        
+        const secondResult = await brewmaster.sendMessage(`
+            Here is the second respones:
+            ${JSON.stringify(functionResponse)}
+            
+            Please create a response that is formatted. 
+          `); 
+          
+        const assistantMessageId = (new Date().getTime() + 1).toString();
+        const assistantResponse = secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          content: assistantResponse,
+          role: "assistant",
+        };
+        const updatedChat = {
+          ...chat,
+          messages: [...chat.messages, assistantMessage],
+          updatedAt: new Date().getTime(),
+        };
+
+        await ctx.db.collection("users").doc(userId).collection("chats").doc(chat.id).set({
+          ...updatedChat,
+        }, { merge: true });
+      
+        return {
+          ...updatedChat,
+          messages: [...chat.messages, assistantMessage],
+        };  
+
       } else {
         const assistantMessageId = (new Date().getTime() + 1).toString();
         const assistantResponse = response.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
