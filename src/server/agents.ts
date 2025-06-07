@@ -17,8 +17,10 @@ export const findItemsInRecentMessage = async (messages: string[]) => {
     systemInstruction: `
       You are a helpful assitant to help find in the users messages what is the name of the menu item that they are trying to talk about, they could be talking about multiple.
       ## For Example
-          USER: Can you 86 chicken.  
-          RESPONSE: chicken,
+          USER:
+            Can you 86 chicken.  
+          Result:
+            chicken,
     `, 
   }); 
   
