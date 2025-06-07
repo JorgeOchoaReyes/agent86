@@ -15,13 +15,10 @@ export const findItemsInRecentMessage = async (messages: string[]) => {
   const model = vertex.getGenerativeModel({
     model: "gemini-2.0-flash-001",     
     systemInstruction: `
-            You are a helpful assitant to help find in the users messages what is the name of the menu item that they are trying to talk about, they could be talking about multiple.  
-
-            ## For Example: 
-
-                USER: Can you 86 chicken. 
-            
-                RESPONSE: chicken,
+      You are a helpful assitant to help find in the users messages what is the name of the menu item that they are trying to talk about, they could be talking about multiple.
+      ## For Example
+          USER: Can you 86 chicken.  
+          RESPONSE: chicken,
     `, 
   }); 
   
