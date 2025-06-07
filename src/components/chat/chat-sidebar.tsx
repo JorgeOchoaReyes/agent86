@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { AlignJustify, Grid, MessageSquare, Plus, } from "lucide-react"; 
+import { AlignJustify, Delete, DeleteIcon, Grid, MessageSquare, Plus, Trash, } from "lucide-react"; 
 import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button"; 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";  
@@ -16,6 +16,7 @@ export function ChatSidebar() {
  
   const getChats = api.chat.getChats.useQuery(); 
   const createChat = api.chat.createChat.useMutation();
+  const deleteChat = api.chat.deleteChat.useMutation(); 
   
   React.useEffect(() => {
     if (getChats.data) {
@@ -29,7 +30,19 @@ export function ChatSidebar() {
     if(!newChatId) {
       toast.error("Failed to create a new chat. Please try again.");
     } 
-    await router.push(`/dashboard/chat?chatId=${newChatId}`);
+    await router.push(`/dashboard?chatId=${newChatId}`);
+  };
+
+  const onDeleteChat = async (id: string) => {
+    const result = await deleteChat.mutateAsync({
+      id: id, 
+    });
+    if(result) {
+      await getChats.refetch(); 
+      toast.success("Chat Deleted.");
+    } else {
+      toast.error("Chat filed to be deleted.");
+    }
   };
 
   return (
@@ -66,17 +79,18 @@ export function ChatSidebar() {
               chats.length > 0 ? (
                 <ul className="space-y-2">
                   {chats.map((chat) => (
-                    <li key={chat.id}>
+                    <li key={chat.id}   
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors w-full",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        "bg-accent text-accent-foreground",
+                        isCollapsed && "justify-center",
+                      )}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Link
                             href={`/dashboard?chatId=${chat.id}`}
-                            className={cn(
-                              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                              "hover:bg-accent hover:text-accent-foreground",
-                              "bg-accent text-accent-foreground",
-                              isCollapsed && "justify-center",
-                            )}
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors w-full"
                           >
                             <MessageSquare className="h-5 w-5" />
                             {!isCollapsed && (
@@ -87,6 +101,13 @@ export function ChatSidebar() {
                           </Link>
                         </TooltipTrigger> 
                       </Tooltip>
+                      {
+                        deleteChat.isPending ? 
+                          <Loader2 className="animate-spin" /> :  
+                          <Trash height={15} className="z-10 hover:text-red-500 cursor-pointer" onClick={async () => {
+                            await onDeleteChat(chat.id);
+                          }} />
+                      }
                     </li>
                   ))}
                 </ul>

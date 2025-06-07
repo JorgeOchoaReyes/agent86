@@ -1,9 +1,10 @@
+import { markItemUn86, restaruantTools } from "./../../tools";
 import { z } from "zod";  
 import { VertexAI , type Content } from "@google-cloud/vertexai";  
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"; 
 import type { Chat, Message, User, VertexAiAccount } from "~/types";
 import { v4 as uuid } from "uuid"; 
-import { getMenuItem, getPossibleMenuItems, markItem86Tool, markItemAs86 } from "~/server/tools"; 
+import { getMenuItems, getPossibleMenuItems, markItemAs86 } from "~/server/tools"; 
 import { findItemsInRecentMessage } from "~/server/agents";
 
 export const chatRouter = createTRPCRouter({
@@ -29,6 +30,27 @@ export const chatRouter = createTRPCRouter({
         systemInstruction: `
         You are a helpful assitant to help users with their menu management, and labor questions. Return your answers as VALID MARKDOWN, turn image content to VALID MARKDOWN as well with 200px width and height.
         ONLY RETURN VALID MARKDOWN
+        When rendering images please ensure the height is 150px and the width is 150px by using an image tag. 
+        For example: <img src="<image-url>" alt="<item-name>" style="width:150px;height:150px;"/>
+
+        ## Generate a response in well-structured and visually appealing Markdown. Focus on readability and a clean user interface.
+
+        Here are some guidelines to follow:
+
+        Headings: Use appropriate heading levels (#, ##, ###, etc.) to organize content logically.
+        Emphasis: Use bold and italic text sparingly for emphasis.
+        Lists: Employ bullet points (* or -) and numbered lists (1.) for clear enumeration.
+        Code Blocks: Format code snippets in fenced code blocks  for syntax highlighting.
+        Blockquotes: Use > for quotes or distinguished text.
+        Tables: If presenting tabular data, format it clearly using Markdown table syntax.
+        Horizontal Rules: Use --- to separate distinct sections when appropriate.
+        Links: Embed links clearly within the text using [link text](URL).
+        Overall Aesthetics:
+        Maintain consistent spacing and indentation.
+        Avoid overly long lines of text; wrap content for better readability on various screens.
+        Prioritize a clean, uncluttered layout.
+        Ensure good contrast between text and implied background (e.g., avoid excessive use of bold or italics that might make text harder to read).
+        The goal is to produce Markdown that is not only informative but also a pleasure to read and visually digest, resembling a well-designed web page or document.
         `, 
       });   
       const { chatId } = input;
@@ -72,7 +94,7 @@ export const chatRouter = createTRPCRouter({
       });
       const brewmaster = model.startChat({
         history: messagesAsGeminiHistory,
-        tools: [ markItem86Tool]
+        tools: [ restaruantTools ]
       });
       
       const response = await brewmaster.sendMessage(input?.message ?? ""); 
@@ -84,7 +106,7 @@ export const chatRouter = createTRPCRouter({
           const userFetch = await ctx.db.collection("users").doc(userId).get(); 
           const userData = userFetch.data() as User; 
           const accessToken = userData.squareAccessToken;
-          const menuItems = await getMenuItem(accessToken ?? ""); 
+          const menuItems = await getMenuItems(accessToken ?? ""); 
 
           const functionResponse = { 
             name: "getMenuItem",
@@ -136,13 +158,66 @@ export const chatRouter = createTRPCRouter({
 
         const asArrayMenuItems = findMenuItemUserIsTalkingAbout?.split(",");
 
-        console.log("findMenuItemUserIsTalkingAbout", asArrayMenuItems);
+        console.log("markItem86", asArrayMenuItems);
 
         const findPossibleMenuItem = await getPossibleMenuItems(accessToken, asArrayMenuItems?.[0] ?? ""); 
         const _86 = await markItemAs86(accessToken, findPossibleMenuItem?.[0]?.id ?? "");
         
         const functionResponse = {
           name: "markItem86",
+          response: {
+            result: _86
+          }
+        }; 
+        
+        const secondResult = await brewmaster.sendMessage(`
+            Here is the second respones:
+            ${JSON.stringify(functionResponse)}
+            
+            Please create a response that is formatted. 
+          `); 
+          
+        const assistantMessageId = (new Date().getTime() + 1).toString();
+        const assistantResponse = secondResult.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Could not get a responsne.";
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          content: assistantResponse,
+          role: "assistant",
+        };
+        const updatedChat = {
+          ...chat,
+          messages: [...chat.messages, assistantMessage],
+          updatedAt: new Date().getTime(),
+        };
+
+        await ctx.db.collection("users").doc(userId).collection("chats").doc(chat.id).set({
+          ...updatedChat,
+        }, { merge: true });
+      
+        return {
+          ...updatedChat,
+          messages: [...chat.messages, assistantMessage],
+        };  
+
+      } else if(call?.name === "markItemUn86") {
+        const userFetch = await ctx.db.collection("users").doc(userId).get(); 
+        const userData = userFetch.data() as User; 
+        const accessToken = userData.squareAccessToken;
+        
+        if(!accessToken) throw new Error("No valid credentials.");
+
+        const findMenuItemUserIsTalkingAbout = await findItemsInRecentMessage([input.message ?? ""]);
+
+        const asArrayMenuItems = findMenuItemUserIsTalkingAbout?.split(",");
+
+        console.log("markItemUn86", asArrayMenuItems);
+
+        const findPossibleMenuItem = await getPossibleMenuItems(accessToken, asArrayMenuItems?.[0] ?? "");  
+
+        const _86 = await markItemUn86(accessToken, findPossibleMenuItem?.[0]?.id ?? "");
+        
+        const functionResponse = {
+          name: "markItemUn86",
           response: {
             result: _86
           }
@@ -224,7 +299,7 @@ export const chatRouter = createTRPCRouter({
       }
       const userChats = await ctx.db.collection("users").doc(userId).collection("chats").orderBy("createdAt", "desc").limit(1).get();
       if (userChats.empty) {
-        throw new Error("No chats found");
+        return null;
       }
       const chat = userChats?.docs?.[0]?.data() as Chat;
       return chat; 
@@ -281,5 +356,27 @@ export const chatRouter = createTRPCRouter({
       }
       console.log("findItems", findItems);
       return findItems;
-    })
+    }),
+  deleteChat: protectedProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .mutation(async ({ctx, input}) => {
+      const idToDelete = input.id; 
+      const userId = ctx.session.user?.uid; 
+      const db = ctx.db; 
+
+      if(!userId || !idToDelete) {
+        throw new Error("Deleting failed, please try again.");
+      }
+
+      try {
+        await db.collection("users").doc(userId).collection("chats").doc(idToDelete).delete(); 
+        return true;          
+      } catch (err) {
+        console.log(err);
+        return false; 
+      }
+
+    })  
 });

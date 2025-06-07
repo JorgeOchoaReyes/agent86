@@ -41,7 +41,18 @@ export function ChatBlock() {
     } else {
       ((async () => {
         const chatData = await getMostRecentChat.mutateAsync(); 
-        setCurrentChat(chatData); 
+        setCurrentChat(chatData ?? {    
+          id: "1",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: [
+            {
+              content: "Hi, I can help you with anything you need regarding menu management!",
+              id: Date.now().toString(),
+              role: "assistant",
+            }
+          ],
+        }); 
       }) as () => void)();  
     }
   }, [router.query.chatId]);
