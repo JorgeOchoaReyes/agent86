@@ -27,8 +27,9 @@ const createInnerTRPCContext = (_opts: CreateContextOptions) => {
  
 export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
   const { req, res } = _opts;
-  const firebasetokenCookie = req.cookies["firebase-token"];
-  if (!firebasetokenCookie) {
+  const firebasetoken = req.headers.authorization?.split(" ")[1];
+  
+  if (!firebasetoken) {
     return createInnerTRPCContext({
       session: {
         user: null,
@@ -37,7 +38,8 @@ export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
       res,
     });
   } 
-  const decodedToken = await app.auth().verifyIdToken(firebasetokenCookie);
+
+  const decodedToken = await app.auth().verifyIdToken(firebasetoken);
   const uid = decodedToken.uid;
   const user = await app.auth().getUser(uid);
 
