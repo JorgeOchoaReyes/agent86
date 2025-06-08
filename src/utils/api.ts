@@ -2,6 +2,7 @@ import { httpBatchLink, loggerLink } from "@trpc/client";
 import { createTRPCNext } from "@trpc/next";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import superjson from "superjson";
+import { getFirebaseIdToken } from "~/firebase";
 
 import { type AppRouter } from "~/server/api/root";
 
@@ -23,6 +24,15 @@ export const api = createTRPCNext<AppRouter>({
         httpBatchLink({ 
           transformer: superjson,
           url: `${getBaseUrl()}/api/trpc`,
+          async headers() {
+            const token = await getFirebaseIdToken();  
+            if (token) {
+              return {
+                authorization: `Bearer ${token}`,
+              };
+            }
+            return {};
+          },
         }),
       ],
     };
